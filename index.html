@@ -161,80 +161,119 @@
   <script src="https://cdn.jsdelivr.net/npm/@lottiefiles/lottie-player@2.0.3/dist/lottie-player.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-  <script>
-    // ============ CONFIG ============
-    // Coloca este archivo junto a "puntosbd.csv" (Nombre,direccion,telefono,Puntos,ID)
-    // Si usas Dropbox RAW u otra URL, reemplaza DATA_URL.
-    const DATA_URL = "./puntosbd.csv";
+<script>
+  // ============ CONFIG ============
+  const DATA_URL = "./puntosbd.csv";
 
-    const el = (id) => document.getElementById(id);
-    el("year").textContent = new Date().getFullYear();
+  const el = (id) => document.getElementById(id);
+  el("year").textContent = new Date().getFullYear();
 
-    const normalizeId = (v) => (v||'').toString().replace(/[ .\-]/g,'').trim();
+  const normalizeId = (v) => (v||'').toString().replace(/[ .\-]/g,'').trim();
 
-    let cache = { loaded:false, rows:[] };
-    let toastTimer;
+  // Formatea números de puntos de manera tolerante (acepta 67,990 / 67.990 / 67990)
+  const formatPoints = (raw) => {
+    let s = String(raw ?? '').trim();
+    if(!s) return '0';
 
-    function toast(msg, type="info"){
-      const t = el("toast");
-      t.classList.remove("hidden");
-      t.textContent = msg;
-      t.className = "mt-4 p-3 rounded-xl text-sm " + (type==="error" ? "bg-red-500/20 border border-red-400/30 text-red-200" : "bg-white/10 border border-white/15 text-white");
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(()=> t.classList.add("hidden"), 3500);
+    // Quita texto sobrante (ej. "Totalidad de puntos: 67,990")
+    s = s.replace(/[^\d.,-]/g, '');
+
+    // Si hay ambos separadores, intentamos detectar miles/decimales
+    const hasComma = s.includes(',');
+    const hasDot = s.includes('.');
+
+    if (hasComma && hasDot) {
+      // Asume coma = decimal y punto = miles → quita puntos de miles
+      s = s.replace(/\./g, '');
+      s = s.replace(',', '.');
+    } else if (hasComma && !hasDot) {
+      // Puede ser miles (67,990) o decimal (67,9). Si hay 3 dígitos tras la coma => miles.
+      const m = s.match(/,(\d{3})(\D|$)/);
+      if (m) s = s.replace(/,/g, ''); else s = s.replace(',', '.');
+    } else {
+      // Solo puntos → probablemente miles
+      const m = s.match(/\.(\d{3})(\D|$)/);
+      if (m) s = s.replace(/\./g, '');
     }
 
-    async function ensureDataLoaded(){
-      if (cache.loaded) return;
-      toast("Cargando base de datos…");
-      const res = await fetch(DATA_URL, { cache: "no-store" });
-      if(!res.ok){ toast("No se pudo cargar el archivo de datos.", "error"); throw new Error("HTTP " + res.status); }
-      const text = await res.text();
-      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+    const n = Number(s);
+    if (Number.isNaN(n)) return raw || '0';
+    return n.toLocaleString('es-CO');
+  };
 
-      // Mapeo tolerante a mayúsculas/minúsculas y BOMs
-      const pick = (obj, keys) => {
-        for (const k of keys) { if (obj[k] !== undefined) return obj[k]; }
-        return "";
+  let cache = { loaded:false, rows:[] };
+  let toastTimer;
+
+  function toast(msg, type="info"){
+    const t = el("toast");
+    t.classList.remove("hidden");
+    t.textContent = msg;
+    t.className = "mt-4 p-3 rounded-xl text-sm " + (type==="error" ? "bg-red-500/20 border border-red-400/30 text-red-200" : "bg-white/10 border border-white/15 text-white");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> t.classList.add("hidden"), 3500);
+  }
+
+  async function ensureDataLoaded(){
+    if (cache.loaded) return;
+    toast("Cargando base de datos…");
+    const res = await fetch(DATA_URL, { cache: "no-store" });
+    if(!res.ok){ toast("No se pudo cargar el archivo de datos.", "error"); throw new Error("HTTP " + res.status); }
+    const text = await res.text();
+    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+
+    // Mapeo tolerante a mayúsculas/minúsculas y BOMs
+    const pick = (obj, keys) => {
+      for (const k of keys) { if (obj[k] !== undefined) return obj[k]; }
+      return "";
+    };
+
+    const rows = (parsed.data || []).map(r => {
+      const id = normalizeId(pick(r, ["ID","Id","id","﻿ID","﻿Id","﻿id"]));
+      // Columnas posibles para puntos (según tus archivos)
+      const puntosRaw = pick(r, [
+        "Puntos","puntos","PUNTOS","﻿Puntos",
+        "GREEN TOTAL PUNTOS","GRAN TOTAL EN PUNTOS",
+        "Totalidad de puntos","TOTALIDAD DE PUNTOS",
+        "TOTAL PUNTOS","TOTAL_EN_PUNTOS","Gran Total en Puntos"
+      ]);
+
+      return {
+        id,
+        nombre: String(pick(r, ["Nombre","NOMBRE","nombre","﻿Nombre"])).trim(),
+        direccion: String(pick(r, ["direccion","Dirección","Direccion","DIRECCION","﻿direccion"])).trim(),
+        telefono: String(pick(r, ["telefono","teléfono","Telefono","TELÉFONO","TEL","﻿telefono"])).trim(),
+        puntos: String(puntosRaw ?? '').trim()
       };
+    }).filter(r => r.id);
 
-      const rows = (parsed.data || []).map(r => {
-        const id = normalizeId(pick(r, ["ID","Id","id","﻿ID","﻿Id","﻿id"]));
-        return {
-          id,
-          nombre: String(pick(r, ["Nombre","NOMBRE","nombre","﻿Nombre"])).trim(),
-          direccion: String(pick(r, ["direccion","Dirección","Direccion","DIRECCION","﻿direccion"])).trim(),
-          telefono: String(pick(r, ["telefono","teléfono","Telefono","TELÉFONO","TEL","﻿telefono"])).trim(),
-          puntos: String(pick(r, ["Puntos","puntos","PUNTOS","﻿Puntos"])).trim()
-        };
-      }).filter(r => r.id);
+    cache = { loaded:true, rows };
+    el("count").textContent = rows.length;
+    toast("Datos cargados ✔");
+  }
 
-      cache = { loaded:true, rows };
-      el("count").textContent = rows.length;
-      toast("Datos cargados ✔");
-    }
+  async function consultar(){
+    const input = el("idinput");
+    const id = normalizeId(input.value);
+    if(!id){ toast("Ingresa el ID del usuario.", "error"); input.focus(); return; }
 
-    async function consultar(){
-      const input = el("idinput");
-      const id = normalizeId(input.value);
-      if(!id){ toast("Ingresa el ID del usuario.", "error"); input.focus(); return; }
+    try{ await ensureDataLoaded(); } catch { return; }
 
-      try{ await ensureDataLoaded(); } catch { return; }
+    const found = cache.rows.find(r => r.id === id);
+    if(!found){ toast("No encontramos ese ID. Verifica el dato.", "error"); return; }
 
-      const found = cache.rows.find(r => r.id === id);
-      if(!found){ toast("No encontramos ese ID. Verifica el dato.", "error"); return; }
+    // Pinta resultado (AHORA incluye puntos)
+    el("nombre").textContent = found.nombre || "Sin nombre";
+    el("idshow").textContent = id;
+    el("direccion").textContent = found.direccion || "No registra";
+    el("telefono").textContent = found.telefono || "No registra";
+    el("puntos").textContent = formatPoints(found.puntos);
 
-      // Pinta resultado
-      el("nombre").textContent = found.nombre || "Sin nombre";
-      el("idshow").textContent = id;
-      el("direccion").textContent = found.direccion || "No registra";
-      el("telefono").textContent = found.telefono || "No registra";
+    el("result").classList.remove("hidden");
+  }
 
-      el("result").classList.remove("hidden");
-    }
+  el("btnConsultar").addEventListener("click", consultar);
+  el("idinput").addEventListener("keydown", (e)=>{ if(e.key==="Enter") consultar(); });
+</script>
 
-    el("btnConsultar").addEventListener("click", consultar);
-    el("idinput").addEventListener("keydown", (e)=>{ if(e.key==="Enter") consultar(); });
-  </script>
 </body>
 </html>
