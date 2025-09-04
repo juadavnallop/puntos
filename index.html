@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Idea Reciclar · Consulta por ID</title>
+  <meta name="description" content="Consulta por ID — Idea Reciclar">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            brand: { DEFAULT:'#16a34a', dark:'#15803d', light:'#86efac' },
+            ink: '#0b1726',
+          },
+          boxShadow: { 'xl-soft': '0 20px 60px -15px rgb(0 0 0 / 0.25)' },
+          backgroundImage: {
+            'grid': 'linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root { color-scheme: light dark; }
+    .blob{ position:absolute; filter:blur(40px); opacity:.35; mix-blend:multiply; border-radius:9999px; animation: float 18s ease-in-out infinite; }
+    .blob2{ animation-duration: 26s; animation-delay: -6s; }
+    .blob3{ animation-duration: 22s; animation-delay: -12s; }
+    @keyframes float{ 0%,100%{ transform: translateY(0) translateX(0) scale(1) } 50%{ transform: translateY(-30px) translateX(20px) scale(1.05) } }
+    .glass { backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+    .shimmer{ background: linear-gradient(110deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,.38) 15%, rgba(255,255,255,.18) 30%); background-size: 200% 100%; animation: shimmer 2.4s infinite; }
+    @keyframes shimmer{ 0%{ background-position: 200% 0 } 100%{ background-position: -200% 0 } }
+    .ring-grad { box-shadow: 0 0 0 4px rgba(22,163,74,.15); }
+  </style>
+</head>
+<body class="bg-ink text-white min-h-screen overflow-x-hidden selection:bg-brand/30 selection:text-white">
+  <!-- Background decor -->
+  <div class="pointer-events-none fixed inset-0 -z-10">
+    <div class="blob w-72 h-72 bg-emerald-500 top-10 left-10"></div>
+    <div class="blob blob2 w-96 h-96 bg-lime-400 bottom-[-60px] right-10"></div>
+    <div class="blob blob3 w-80 h-80 bg-green-700 top-1/2 left-1/2 -translate-x-1/2"></div>
+    <div class="absolute inset-0 bg-grid bg-[size:24px_24px] opacity-[0.12]"></div>
+    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-ink/10 to-ink"></div>
+  </div>
+
+  <!-- Header / Hero -->
+  <header class="max-w-6xl mx-auto px-6 pt-10 pb-6">
+    <div class="flex items-center justify-between gap-6">
+      <div class="flex items-center gap-3">
+        <div class="h-11 w-11 rounded-xl bg-white/10 grid place-items-center ring-1 ring-white/15">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M7 21h10M5 8c0-2.761 2.686-5 6-5s6 2.239 6 5-2 5-6 9c-4-4-6-6.239-6-9Z"/>
+            <path d="M8 8a4 4 0 1 0 8 0"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm uppercase tracking-[0.2em] text-white/60">Idea Reciclar</p>
+          <h1 class="text-3xl md:text-4xl font-extrabold leading-tight">Consulta por <span class="text-brand">ID</span></h1>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Card -->
+  <main class="max-w-6xl mx-auto px-6 pb-20">
+    <div class="grid md:grid-cols-2 gap-8 items-stretch">
+      <!-- Query Card -->
+      <section class="relative glass bg-white/10 ring-1 ring-white/10 rounded-3xl p-6 md:p-8 shadow-xl-soft">
+        <div class="absolute -top-4 -left-4 text-xs bg-emerald-500 text-emerald-950 font-bold rounded-full px-3 py-1 shadow">Rápido & Seguro</div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="inline-flex h-2 w-2 bg-emerald-400 rounded-full animate-pulse"></span>
+          <p class="text-sm text-white/70">Consulta por identificador (ID)</p>
+        </div>
+        <label class="text-sm font-semibold text-white/90">ID del usuario</label>
+        <div class="mt-2 flex flex-col sm:flex-row gap-3">
+          <input id="idinput" autocomplete="off" placeholder="Ej: IDVT1234"
+            class="flex-1 h-12 px-4 rounded-xl bg-white/90 text-ink placeholder:text-ink/40 focus:outline-none ring-2 ring-transparent focus:ring-brand ring-grad transition" />
+          <button id="btnConsultar"
+            class="h-12 px-5 rounded-xl bg-brand hover:bg-brand/dark text-white font-semibold shadow-xl-soft transition active:scale-[.99]">
+            Consultar
+          </button>
+        </div>
+
+        <!-- Feedback -->
+        <div id="toast" class="hidden mt-4 p-3 rounded-xl border border-white/15 bg-white/10 text-sm"></div>
+
+        <!-- Result -->
+        <div id="result" class="hidden mt-6">
+          <div class="relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-emerald-500 via-lime-400 to-green-700 text-ink shadow-xl-soft">
+            <div class="absolute inset-0 shimmer opacity-[.25]"></div>
+            <p class="text-xs font-bold uppercase tracking-widest text-ink/70">Resultado</p>
+            <h3 id="nombre" class="text-2xl font-extrabold leading-tight mt-1">—</h3>
+            <dl class="mt-3 space-y-1 text-sm">
+              <div class="flex gap-2"><dt class="w-24 font-semibold">ID:</dt><dd id="idshow">—</dd></div>
+              <div class="flex gap-2"><dt class="w-24 font-semibold">Dirección:</dt><dd id="direccion">—</dd></div>
+              <div class="flex gap-2"><dt class="w-24 font-semibold">Teléfono:</dt><dd id="telefono">—</dd></div>
+            </dl>
+          </div>
+        </div>
+
+        <p id="meta" class="mt-4 text-xs text-white/60">Registros cargados: <span id="count">0</span></p>
+      </section>
+
+      <!-- About Card -->
+      <aside class="relative bg-white/5 ring-1 ring-white/10 rounded-3xl p-6 md:p-8 shadow-xl-soft">
+        <div class="flex items-center gap-3">
+          <div class="h-11 w-11 rounded-xl bg-brand/20 grid place-items-center ring-1 ring-brand/30">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M4 4v16a2 2 0 0 0 2 2h8l6-6V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2z"/><path d="M14 22v-6a2 2 0 0 1 2-2h6"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-2xl font-extrabold">Sobre Idea Reciclar</h2>
+            <p class="text-white/70 mt-1">Impulsamos la economía circular con un programa que premia las buenas prácticas ambientales.</p>
+          </div>
+        </div>
+
+        <ul class="mt-6 space-y-3 text-white/80">
+          <li class="flex items-start gap-3">
+            <div class="mt-1 h-6 w-6 rounded-lg bg-brand/20 ring-1 ring-brand/30 grid place-items-center text-brand">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4.5 4.5L19 7"/></svg>
+            </div>
+            Recepción y clasificación responsable de residuos.
+          </li>
+          <li class="flex items-start gap-3">
+            <div class="mt-1 h-6 w-6 rounded-lg bg-brand/20 ring-1 ring-brand/30 grid place-items-center text-brand">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4.5 4.5L19 7"/></svg>
+            </div>
+            Educación ambiental en la comunidad.
+          </li>
+          <li class="flex items-start gap-3">
+            <div class="mt-1 h-6 w-6 rounded-lg bg-brand/20 ring-1 ring-brand/30 grid place-items-center text-brand">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4.5 4.5L19 7"/></svg>
+            </div>
+            Alianzas con comercios para redimir beneficios.
+          </li>
+        </ul>
+
+        <div class="mt-8 grid sm:grid-cols-2 gap-3">
+          <a class="group inline-flex items-center justify-center h-11 rounded-xl bg-white text-ink font-semibold hover:shadow-xl-soft transition ring-1 ring-white/40" href="mailto:contacto@ideareciclar.com">
+            Contacto
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2 group-hover:translate-x-0.5 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <a class="inline-flex items-center justify-center h-11 rounded-xl bg-brand/20 text-brand font-semibold hover:bg-brand/30 transition ring-1 ring-brand/30" href="#">
+            Política de datos
+          </a>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="text-center text-xs text-white/60 pb-10">© <span id="year"></span> Idea Reciclar · Todos los derechos reservados.</footer>
+
+  <!-- Vendors -->
+  <script src="https://cdn.jsdelivr.net/npm/@lottiefiles/lottie-player@2.0.3/dist/lottie-player.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <script>
+    // ============ CONFIG ============
+    // Coloca este archivo junto a "puntosbd.csv" (Nombre,direccion,telefono,Puntos,ID)
+    // Si usas Dropbox RAW u otra URL, reemplaza DATA_URL.
+    const DATA_URL = "./puntosbd.csv";
+
+    const el = (id) => document.getElementById(id);
+    el("year").textContent = new Date().getFullYear();
+
+    const normalizeId = (v) => (v||'').toString().replace(/[ .\-]/g,'').trim();
+
+    let cache = { loaded:false, rows:[] };
+    let toastTimer;
+
+    function toast(msg, type="info"){
+      const t = el("toast");
+      t.classList.remove("hidden");
+      t.textContent = msg;
+      t.className = "mt-4 p-3 rounded-xl text-sm " + (type==="error" ? "bg-red-500/20 border border-red-400/30 text-red-200" : "bg-white/10 border border-white/15 text-white");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(()=> t.classList.add("hidden"), 3500);
+    }
+
+    async function ensureDataLoaded(){
+      if (cache.loaded) return;
+      toast("Cargando base de datos…");
+      const res = await fetch(DATA_URL, { cache: "no-store" });
+      if(!res.ok){ toast("No se pudo cargar el archivo de datos.", "error"); throw new Error("HTTP " + res.status); }
+      const text = await res.text();
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+
+      // Mapeo tolerante a mayúsculas/minúsculas y BOMs
+      const pick = (obj, keys) => {
+        for (const k of keys) { if (obj[k] !== undefined) return obj[k]; }
+        return "";
+      };
+
+      const rows = (parsed.data || []).map(r => {
+        const id = normalizeId(pick(r, ["ID","Id","id","﻿ID","﻿Id","﻿id"]));
+        return {
+          id,
+          nombre: String(pick(r, ["Nombre","NOMBRE","nombre","﻿Nombre"])).trim(),
+          direccion: String(pick(r, ["direccion","Dirección","Direccion","DIRECCION","﻿direccion"])).trim(),
+          telefono: String(pick(r, ["telefono","teléfono","Telefono","TELÉFONO","TEL","﻿telefono"])).trim(),
+          puntos: String(pick(r, ["Puntos","puntos","PUNTOS","﻿Puntos"])).trim()
+        };
+      }).filter(r => r.id);
+
+      cache = { loaded:true, rows };
+      el("count").textContent = rows.length;
+      toast("Datos cargados ✔");
+    }
+
+    async function consultar(){
+      const input = el("idinput");
+      const id = normalizeId(input.value);
+      if(!id){ toast("Ingresa el ID del usuario.", "error"); input.focus(); return; }
+
+      try{ await ensureDataLoaded(); } catch { return; }
+
+      const found = cache.rows.find(r => r.id === id);
+      if(!found){ toast("No encontramos ese ID. Verifica el dato.", "error"); return; }
+
+      // Pinta resultado
+      el("nombre").textContent = found.nombre || "Sin nombre";
+      el("idshow").textContent = id;
+      el("direccion").textContent = found.direccion || "No registra";
+      el("telefono").textContent = found.telefono || "No registra";
+
+      el("result").classList.remove("hidden");
+    }
+
+    el("btnConsultar").addEventListener("click", consultar);
+    el("idinput").addEventListener("keydown", (e)=>{ if(e.key==="Enter") consultar(); });
+  </script>
+</body>
+</html>
